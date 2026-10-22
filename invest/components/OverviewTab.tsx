@@ -10,36 +10,37 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
-import { Campaign, formatIDR } from "@/lib/campaign";
+import { Campaign, formatIDR, getCampaignHighlights, Highlight } from "@/lib/campaign";
 import { formatDate } from "@/lib/investment";
+import { useEffect, useState } from "react";
 
-export interface Highlight {
-  Title: string;
-  Description: string;
-}
+// export interface Highlight {
+//   Title: string;
+//   Description: string;
+// }
 
-const PLACEHOLDER_HIGHLIGHTS: Highlight[] = [
-  {
-    Title: "Proven revenue traction",
-    Description:
-      "The company has grown monthly recurring revenue 3x year-over-year, driven by repeat customers and a growing subscription base.",
-  },
-  {
-    Title: "Large and expanding market",
-    Description:
-      "Operating in a market projected to reach IDR 50 trillion by 2030, with less than 10% currently served by digital platforms.",
-  },
-  {
-    Title: "Experienced founding team",
-    Description:
-      "Founded by operators with 15+ years of combined industry experience and a prior successful exit in the same sector.",
-  },
-  {
-    Title: "Clear path to profitability",
-    Description:
-      "Gross margins above 60% with unit economics already positive; new capital is allocated to growth, not survival.",
-  },
-];
+// const PLACEHOLDER_HIGHLIGHTS: Highlight[] = [
+//   {
+//     Title: "Proven revenue traction",
+//     Description:
+//       "The company has grown monthly recurring revenue 3x year-over-year, driven by repeat customers and a growing subscription base.",
+//   },
+//   {
+//     Title: "Large and expanding market",
+//     Description:
+//       "Operating in a market projected to reach IDR 50 trillion by 2030, with less than 10% currently served by digital platforms.",
+//   },
+//   {
+//     Title: "Experienced founding team",
+//     Description:
+//       "Founded by operators with 15+ years of combined industry experience and a prior successful exit in the same sector.",
+//   },
+//   {
+//     Title: "Clear path to profitability",
+//     Description:
+//       "Gross margins above 60% with unit economics already positive; new capital is allocated to growth, not survival.",
+//   },
+// ];
 
 function formatPercent(value: number): string {
   return `${value.toFixed(2).replace(/\.?0+$/, "")}%`;
@@ -47,11 +48,30 @@ function formatPercent(value: number): string {
 
 export function OverviewTab({
   campaign,
-  highlights = PLACEHOLDER_HIGHLIGHTS,
+  // highlights = PLACEHOLDER_HIGHLIGHTS,
 }: {
   campaign: Campaign;
   highlights?: Highlight[];
 }) {
+    const [highlights,setHighlights] = useState<Highlight[]>([])
+
+    useEffect(() => {
+      let cancelled = false;
+      (async () => {
+        try {
+          const result = await getCampaignHighlights(campaign.ID);
+          if (!cancelled) setHighlights(result ?? []);
+          console.log(result)
+          console.log("title " +  result[0].Title)
+        } catch {
+          
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    },[campaign.ID]);
+
   const equityOffered =
     campaign.Valuation > 0
       ? (campaign.FundingGoal / campaign.Valuation) * 100

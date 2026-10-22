@@ -24,12 +24,17 @@ export async function getCampaignUpdates(
   return res.json();
 }
 
+export interface CursorUpdates {
+  data: CampaignUpdate[] | null;
+  next_cursor: number;
+}
+
 export async function getCampaignUpdatesByUser(
-  limit = 24,
-  offset = 0
-): Promise<CampaignUpdate[]> {
+  limit = 5,
+  cursor = 0
+): Promise<CursorUpdates> {
   const res = await fetch(
-    `${API_URL}/api/v1/updates?limit=${limit}&offset=${offset}`,
+    `${API_URL}/api/v1/updates?limit=${limit}&cursor=${cursor}`,
     { 
       method: "GET",
       headers: { "Content-Type": "application/json" },

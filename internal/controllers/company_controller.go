@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -127,6 +128,10 @@ func (ctrl *CompanyController) RegisterNewCompany(c *gin.Context) {
 
 	createdCompany, err := ctrl.companyUsecase.RegisterNewCompany(c.Request.Context(), &company,session.UserID,files)
 	if err != nil {
+		if errors.Is(err, domain.ErrPhoneNumberRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not create company: " + err.Error()})
 		return
 	}

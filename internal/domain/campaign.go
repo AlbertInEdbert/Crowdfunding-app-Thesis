@@ -29,6 +29,7 @@ type Campaign struct {
 	ID            uint32         `gorm:"primaryKey;column:id;type:integer"`
 	Title         string         `gorm:"type:varchar(255);not null"`
 	Description   string         `gorm:"type:text;not null"`
+	Overview  	 string         `gorm:"type:text;not null"`
 	Valuation     int64          `gorm:"type:decimal(19,0)"`
 	FundingAmount int64          `gorm:"column:funding_amount;type:decimal(19,0)"`
 	FundingGoal   int64          `gorm:"column:funding_goal;type:decimal(19,0)"`
@@ -39,6 +40,7 @@ type Campaign struct {
 	EndDate       time.Time      `gorm:"column:end_date;type:date"`
 	TotalInvestor int32          `gorm:"column:total_investor;type:integer"`
 	CompanyID     uint32         `gorm:"column:companyid;type:integer"`
+	H3Notified    bool           `gorm:"column:h3_notified;type:boolean;not null;default:false"` // set once the H-3 reminder emails have been sent
 	CreatedAt     time.Time      `gorm:"column:create_at;type:timestamp"`
 	UpdatedAt     time.Time      `gorm:"column:updated_at;type:timestamp"`
 

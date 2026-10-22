@@ -24,6 +24,8 @@ type CampaignRepository interface {
 	WithTx(tx *gorm.DB) CampaignRepository
 	SetCampaignDate(ctx context.Context, req dto.CampaignDateRequest, campaignId uint32) error
 	CheckCampaignDateAndUpdateStatus(ctx context.Context,status domain.CampaignStatus) error
+	FindEndedCampaigns(ctx context.Context) ([]domain.Campaign, error)
+	FindEndingSoonCampaigns(ctx context.Context, from, to time.Time) ([]domain.Campaign, error)
 }
 
 type campaignRepository struct {
@@ -149,3 +151,20 @@ func (r *campaignRepository)CheckCampaignDateAndUpdateStatus(ctx context.Context
 	
 	return nil
 }	
+
+func (r *campaignRepository) FindEndedCampaigns(ctx context.Context) ([]domain.Campaign, error){
+	var campaigns []domain.Campaign
+	err := r.DB.WithContext(ctx).
+		Where("status IN ? AND end_date <= ?", []domain.CampaignStatus{domain.CampaignStatusActive, domain.CampaignStatusFunded}, time.Now()).
+		Find(&campaigns).Error
+	return campaigns, err
+}
+
+func (r *campaignRepository) FindEndingSoonCampaigns(ctx context.Context, from, to time.Time) ([]domain.Campaign, error) {
+	var campaigns []domain.Campaign
+	err := r.DB.WithContext(ctx).
+		Where("status IN ? AND h3_notified = ? AND end_date BETWEEN ? AND ?",
+			[]domain.CampaignStatus{domain.CampaignStatusActive, domain.CampaignStatusFunded}, false, from, to).
+		Find(&campaigns).Error
+	return campaigns, err
+}

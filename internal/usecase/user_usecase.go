@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/SamuelLazuardy/investment/internal/delivery/http/dto"
 	domain "github.com/SamuelLazuardy/investment/internal/domain"
@@ -55,4 +56,15 @@ func (u *userUsecase) RegisterNewUser(ctx context.Context, user *domain.User) er
 	}
 
 	return u.userRepo.Create(ctx, user)
+}
+
+func requirePhoneNumber(ctx context.Context, userRepo repository.UserRepository, userID uint32) error {
+	user, err := userRepo.FindByID(ctx, userID)
+	if err != nil || user == nil {
+		return errors.New("user could not be retrieved")
+	}
+	if strings.TrimSpace(user.PhoneNumber) == "" {
+		return domain.ErrPhoneNumberRequired
+	}
+	return nil
 }

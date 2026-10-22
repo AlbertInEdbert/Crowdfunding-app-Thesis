@@ -8,7 +8,10 @@ import { Label } from "../ui/label";
 import { getCurrentSession, getSignOut, getUserProfile } from "@/lib/user";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+
+// Routes where the navbar should not appear (auth screens).
+const HIDDEN_PATHS = ["/sign-in", "/sign-up", "/login"];
 
 const ADMIN_ROLE_ID = 7;
 const ISSUER_ROLE_ID = 8;
@@ -28,6 +31,7 @@ const PUBLIC_LINKS: NavLink[] = [
 const INVESTOR_LINKS: NavLink[] = [
   { label: "Dashboard", href: "/dashboard" },
   // { label: "Portfolio", href: "/portfolio" },
+  // { label: "Dividends", href: "/dividends" },
   { label: "Watchlist", href: "/watchlist" },
 ];
 
@@ -35,11 +39,11 @@ const ISSUER_LINKS: NavLink[] = [
     { label: "Company", href: "/company"},
     // { label: "Campaign", href: "/campaign"},
     // { label: "Campaign", href: "/campaign/new"},  
-    { label: "Approval", href: "#",children: [
-      { label: "Company Approval", href: "/approval/company" },
-      { label: "Campaign Approval", href: "/approval/campaign" },
-      // { label: "Investment Approval", href: "/approval/investment" },
-    ]},
+    // { label: "Approval", href: "#",children: [
+    //   { label: "Company Approval", href: "/approval/company" },
+    //   { label: "Campaign Approval", href: "/approval/campaign" },
+    //   // { label: "Investment Approval", href: "/approval/investment" },
+    // ]},
     { label: "Watchlist", href: "/watchlist" },
 ];
 
@@ -95,8 +99,12 @@ export default function Navbar({roleId, isLoggedIn }: NavbarProps) {
     (async () => {
       try {
         const session = await getCurrentSession();
+        
         if (!session) {
-          if (!cancelled) setUnauthenticated(true);
+          if (!cancelled){
+            setUnauthenticated(true);
+          }
+
           return;
         }
         const data = await getUserProfile(session.UserID);
@@ -128,6 +136,13 @@ export default function Navbar({roleId, isLoggedIn }: NavbarProps) {
       setLoadError("Could not sign out. Make sure the backend is running on port 8080.");
     }
   }
+
+  const handleRedirectProfile = () => {
+    router.push(`/settings`)
+  }
+
+  const pathname = usePathname();
+  if (HIDDEN_PATHS.includes(pathname)) return null;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur supports-backdrop-filter:bg-white/60">
@@ -177,6 +192,9 @@ export default function Navbar({roleId, isLoggedIn }: NavbarProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-40" align="start">
                 <DropdownMenuGroup>
+                  <DropdownMenuItem onSelect={handleRedirectProfile}>
+                    Profile
+                  </DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleSignOut}>
                     Sign Out
                   </DropdownMenuItem>

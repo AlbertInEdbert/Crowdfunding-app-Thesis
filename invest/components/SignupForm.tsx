@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useSearchParams } from "next/navigation";
 
 import { Field, FieldLabel, FieldError, FieldDescription } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -14,40 +13,48 @@ import { Separator } from "./ui/separator";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-const formSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters long"),
-});
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().min(1, "Email is required").email("Invalid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters long"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 type FormValues = z.infer<typeof formSchema>;
 
-export default function LoginForm() {
-  const searchParams = useSearchParams();
-  const authFailed = searchParams.get("error") === "google_auth_failed";
+export default function SignupForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
   async function onSubmit(values: FormValues) {
     setSubmitError(null);
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(values),
+        body: JSON.stringify({
+          name: values.name,
+          email: values.email,
+          password: values.password,
+        }),
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        throw new Error(data?.message ?? "Invalid email or password");
+        throw new Error(data?.error ?? data?.message ?? "Could not create account");
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = "/sign-in";
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -69,6 +76,23 @@ export default function LoginForm() {
     <div className="w-full max-w-md mx-auto p-6 bg-white rounded-xl border border-slate-200 shadow-sm text-slate-900">
       <form onSubmit={form.handleSubmit(onSubmit)} onReset={onReset} className="space-y-6 @container">
         <div className="grid grid-cols-12 gap-4">
+          <Controller
+            control={form.control}
+            name="name"
+            render={({ field, fieldState }) => (
+              <Field className="col-span-12 flex flex-col gap-2 items-start" data-invalid={fieldState.invalid}>
+                <FieldLabel className="w-auto font-medium text-slate-700">Name</FieldLabel>
+                <Input
+                  placeholder="Full name"
+                  type="text"
+                  className="bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 focus-visible:ring-slate-400"
+                  {...field}
+                />
+                {fieldState.invalid && <FieldError className="text-red-600 text-xs" errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+
           <Controller
             control={form.control}
             name="email"
@@ -103,6 +127,23 @@ export default function LoginForm() {
             )}
           />
 
+          <Controller
+            control={form.control}
+            name="confirmPassword"
+            render={({ field, fieldState }) => (
+              <Field className="col-span-12 flex flex-col gap-2 items-start" data-invalid={fieldState.invalid}>
+                <FieldLabel className="w-auto font-medium text-slate-700">Confirm Password</FieldLabel>
+                <Input
+                  placeholder="Repeat your password"
+                  type="password"
+                  className="bg-white text-slate-900 border-slate-300 placeholder:text-slate-400 focus-visible:ring-slate-400"
+                  {...field}
+                />
+                {fieldState.invalid && <FieldError className="text-red-600 text-xs" errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+
           {submitError && (
             <p className="col-span-12 text-red-600 text-sm">{submitError}</p>
           )}
@@ -113,7 +154,7 @@ export default function LoginForm() {
               disabled={isSubmitting}
               className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium disabled:opacity-60"
             >
-              {isSubmitting ? "Signing in..." : "Submit"}
+              {isSubmitting ? "Creating account..." : "Create account"}
             </Button>
           </div>
 
@@ -122,14 +163,13 @@ export default function LoginForm() {
             <span className="text-sm text-muted-foreground shrink-0">OR</span>
             <Separator className="flex-1" />
           </div>
-          
+
           <div className="col-span-12">
-            {authFailed && <p style={{ color: "red" }}>Google sign-in failed. Please try again.</p>}
-            <GoogleButton onClick={handleGoogleLogin} />
+            <GoogleButton onClick={handleGoogleLogin} label="Sign up with Google" />
           </div>
           <div className="col-span-12 flex items-center gap-4">
             <FieldDescription className="text-center">
-              Don&apos;t have an account? <a href="/sign-up">Sign up</a>
+              Already have an account? <a href="/sign-in">Sign in</a>
             </FieldDescription>
           </div>
         </div>

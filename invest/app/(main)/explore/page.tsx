@@ -3,13 +3,29 @@
 import { CampaignCard } from "@/components/share/CampaignCard";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Campaign, CampaignSummary, getCampaigns, getCampaignsAndCover, PaginatedCampaigns, PaginatedCampaignSummary } from "@/lib/campaign";
 import { Category, getCategory } from "@/lib/category";
 import { ChevronDown, Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const STATUSES = ["DRAFT", "ACTIVE", "FUNDED", "COMPLETED", "FAILED", "REJECTED"];
+const PAGE_SIZE = 9;
+
+function getPageNumbers(current: number, totalPages: number, siblings = 1) {
+  const range: (number | "ellipsis")[] = []
+  const start = Math.max(2, current - siblings)
+  const end = Math.min(totalPages - 1, current + siblings)
+
+  range.push(1)
+  if (start > 2) range.push("ellipsis")
+  for (let i = start; i <= end; i++) range.push(i)
+  if (end < totalPages - 1) range.push("ellipsis")
+  if (totalPages > 1) range.push(totalPages)
+
+  return range
+}
 
 export default function CampaignPage() {
   const [query, setQuery] = useState("");
@@ -20,7 +36,8 @@ export default function CampaignPage() {
   const [currCategory, setCurrCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [status, setStatus] = useState<string | null>("ACTIVE");
-  
+  const [page, setPage] = useState(1);
+
   useEffect(() => {
     let cancelled = false;
     getCategory()
@@ -34,18 +51,20 @@ export default function CampaignPage() {
   }, []);
 
   useEffect(() => {
+    setPage(1);
+  }, [query, status, currCategory]);
+
+  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setLoadError(null);
     const timer = setTimeout(async () => {
       try {
-        const data = await getCampaignsAndCover(9, 0, {
+        const data = await getCampaignsAndCover(PAGE_SIZE, (page - 1) * PAGE_SIZE, {
           search: query,
           status: status ?? undefined,
           category: currCategory ?? undefined,
         });
-        console.log("total : " + data.total)
-        console.log("total : " + data.data)
         if (!cancelled){
           setCampaignCount(data.total)
           setCampaigns(data.data)
@@ -62,7 +81,10 @@ export default function CampaignPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, status, currCategory]);
+  }, [query, status, currCategory, page]);
+
+  const totalPages = Math.max(1, Math.ceil(campaignCount / PAGE_SIZE));
+  const pages = useMemo(() => getPageNumbers(page, totalPages), [page, totalPages]);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
@@ -170,6 +192,55 @@ export default function CampaignPage() {
             <CampaignCard key={campaign.id} campaign={campaign}/>
           ))}
         </div>
+      )}
+
+      {!loading && !loadError && totalPages > 1 && (
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setPage((p) => Math.max(1, p - 1))
+                }}
+                className={page === 1 ? "pointer-events-none opacity-50" : undefined}
+              />
+            </PaginationItem>
+
+            {pages.map((p, i) =>
+              p === "ellipsis" ? (
+                <PaginationItem key={`ellipsis-${i}`}>
+                  <PaginationEllipsis />
+                </PaginationItem>
+              ) : (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    href="#"
+                    isActive={p === page}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setPage(p)
+                    }}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              )
+            )}
+
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setPage((p) => Math.min(totalPages, p + 1))
+                }}
+                className={page === totalPages ? "pointer-events-none opacity-50" : undefined}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       )}
     </main>
   );

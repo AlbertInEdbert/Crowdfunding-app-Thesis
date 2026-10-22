@@ -33,12 +33,14 @@ type CompanyUsecase interface {
 
 type companyUsecase struct {
 	companyRepo repository.CompanyRepository
+	userRepo    repository.UserRepository
 	storageUsecase   StorageUsecase
 }
 
-func NewCompanyUsecase(companyRepo repository.CompanyRepository, storageUsecase StorageUsecase) CompanyUsecase {
+func NewCompanyUsecase(companyRepo repository.CompanyRepository, userRepo repository.UserRepository, storageUsecase StorageUsecase) CompanyUsecase {
 	return &companyUsecase{
 		companyRepo: companyRepo,
+		userRepo:    userRepo,
 		storageUsecase : storageUsecase,
 	}
 }
@@ -68,6 +70,10 @@ func (u *companyUsecase) FindByCompanyId(ctx context.Context, id uint32) (*domai
 }
 
 func (c *companyUsecase) RegisterNewCompany(ctx context.Context, req *dto.CreateCompanyRequest, userID uint32, files []CompanyFileInput) (*domain.Company, error) {
+	if err := requirePhoneNumber(ctx, c.userRepo, userID); err != nil {
+		return nil, err
+	}
+
 	existing, _ := c.companyRepo.FindByName(ctx,req.Name)
 	if existing != nil {
 		return nil, fmt.Errorf("cannot register company with same name")

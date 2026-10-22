@@ -30,7 +30,7 @@ import {
   InvestmentStatus,
 } from "@/lib/investment";
 import { getCurrentSession } from "@/lib/user";
-import { CampaignUpdate, getCampaignUpdates, getCampaignUpdatesByUser } from "@/lib/updates";
+import { CampaignUpdate, getCampaignUpdatesByUser } from "@/lib/updates";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { getPortfolio, PortfolioItem } from "@/lib/portfolio";
 
@@ -74,6 +74,7 @@ function getPageNumbers(current: number, totalPages: number, siblings = 1) {
 }
 
 const PAGE_SIZE = 2;
+const UPDATE_PAGE_SIZE = 5;
 
 export default function DashboardPage() {
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -93,6 +94,8 @@ export default function DashboardPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [latestUpdates, setLatestUpdates] = useState<CampaignUpdate[]>([]);
+  const [updateCursor, setUpdateCursor] = useState(0);
+  const [hasMoreUpdates, setHasMoreUpdates] = useState(false);
   const [investmentPage, setInvestmentPage] = useState(1)
   const [portfolioPage, setPortfolioPage] = useState(1)
   const [investmentCount, setInvestmentCount] = useState(0);
@@ -130,22 +133,38 @@ const getSession = async () => {
   return session;
 };
 
-const loadUpdate = useCallback(async () => {
+const loadUpdate = useCallback(async (cursor = 0) => {
   setLoadingUpdate(true);
   setLoadErrorUpdate(null);
   try {
-    
-    const updateLists = await getCampaignUpdatesByUser(5, 0)
-    setLatestUpdates(updateLists)
-
+    const res = await getCampaignUpdatesByUser(UPDATE_PAGE_SIZE, cursor);
+    const incoming = res.data ?? [];
+    setLatestUpdates((prev) => {
+      if (cursor === 0) return incoming;
+      const seen = new Set(prev.map((u) => u.ID));
+      return [...prev, ...incoming.filter((u) => !seen.has(u.ID))];
+    });
+    setUpdateCursor(res.next_cursor ?? 0);
+    setHasMoreUpdates((res.next_cursor ?? 0) > 0);
   } catch {
     setLoadErrorUpdate(
-      "Could not load your investments. Make sure the backend is running on port 8080."
+      "Could not load updates. Make sure the backend is running on port 8080."
     );
   } finally {
     setLoadingUpdate(false);
   }
-},[])
+}, [])
+
+const handleUpdatesScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const el = e.currentTarget;
+  if (
+    el.scrollHeight - el.scrollTop - el.clientHeight < 32 &&
+    hasMoreUpdates &&
+    !loadingUpdate
+  ) {
+    loadUpdate(updateCursor);
+  }
+};
 
 const loadInvestments = useCallback(async () => {
   setLoadingInvestment(true);
@@ -160,20 +179,6 @@ const loadInvestments = useCallback(async () => {
       (investmentPage - 1) * PAGE_SIZE
     );
     setInvestments(txs ?? []);
-
-    // const campaignIds = [...new Set((txs ?? []).map((t) => t.CampaignID))];
-    // const updateLists = await Promise.all(
-    //   campaignIds.map((id) => getCampaignUpdates(id, 5, 0).catch(() => []))
-    // );
-    // setLatestUpdates(
-    //   updateLists
-    //     .flat()
-    //     .sort(
-    //       (a, b) =>
-    //         new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime()
-    //     )
-    //     .slice(0, 5)
-    // );
   } catch {
     setLoadErrorInvestment(
       "Could not load your investments. Make sure the backend is running on port 8080."
@@ -231,10 +236,6 @@ useEffect(() => {
 useEffect(() => {
   loadPortfolioData();
 }, [loadPortfolioData]);
-
-useEffect(() => {
-  loadUpdate();
-}, []);
 
   const stats = useMemo(() => {
     const allInvestments = portfolios.flatMap((p) => p.investments);
@@ -553,36 +554,51 @@ useEffect(() => {
             <CardTitle>Latest updates</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingUpdate ? (
+            {loadingUpdate && latestUpdates.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 Loading updates…
               </p>
-            ): loadErrorPortfolio ? (
+            ): loadErrorUpdate ? (
               <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {loadErrorPortfolio}
+                {loadErrorUpdate}
               </p>
             ) : latestUpdates.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No updates yet from campaigns you invested in.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-100">
-                {latestUpdates.map((u) => (
-                  <li key={u.ID} className="py-3">
-                    <Link
-                      href={`/campaign/${u.CampaignID}`}
-                      className="text-sm font-medium text-blue-900 hover:underline"
-                    >
-                      {u.Title}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {campaignTitles[u.CampaignID] ??
-                        `Campaign #${u.CampaignID}`}{" "}
-                      · {formatDate(u.CreatedAt)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+              <div
+                className="max-h-96 overflow-y-auto pr-2"
+                onScroll={handleUpdatesScroll}
+              >
+                <ul className="divide-y divide-slate-100">
+                  {latestUpdates.map((u) => (
+                    <li key={u.ID} className="py-3">
+                      <Link
+                        href={`/campaign/${u.CampaignID}`}
+                        className="text-sm font-medium text-blue-900 hover:underline"
+                      >
+                        {u.Title}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {campaignTitles[u.CampaignID] ??
+                          `Campaign #${u.CampaignID}`}{" "}
+                        · {formatDate(u.CreatedAt)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+                {loadingUpdate && (
+                  <p className="py-3 text-center text-xs text-muted-foreground">
+                    Loading more…
+                  </p>
+                )}
+                {!hasMoreUpdates && (
+                  <p className="py-3 text-center text-xs text-muted-foreground">
+                    You have seen all updates.
+                  </p>
+                )}
+              </div>
             )}
           </CardContent>
         </Card>

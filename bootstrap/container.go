@@ -39,12 +39,14 @@ type repositories struct {
 	storage        repository.StorageRepository
 	campaignMedia  repository.CampaignMediaRepository
 	highlight      repository.HighlightRepository
+	role           repository.RoleRepository
 }
 
 type usecases struct {
 	user        usecase.UserUsecase
 	auth        usecase.AuthUsecase
 	storage     usecase.StorageUsecase
+	email       usecase.SendEmailUsecase
 	company     usecase.CompanyUsecase
 	campaign    usecase.CampaignUsecase
 	transaction usecase.TransactionUsecase
@@ -54,16 +56,17 @@ type usecases struct {
 	updates     usecase.UpdatesUsecase
 	watchlist   usecase.WatchlistUsecase
 	portfolio   usecase.PortfolioUsecase
+	role        usecase.RoleUsecase
 }
 
-func NewContainer(db *gorm.DB, redisClient *redis.Client, s3Client *s3.Client, r2Bucket string) *Container {
+func NewContainer(db *gorm.DB, redisClient *redis.Client, s3Client *s3.Client, r2Bucket string, emailSender domain.EmailSender) *Container {
 	repos := initRepositories(db, s3Client, r2Bucket)
 
 	tokenUtil := util.NewTokenUtil(redisClient)
 	googleOAuthConfig := oauth.NewGoogleConfig()
 	paymentGateway := mockpay.NewGateway()
 
-	ucs := initUsecases(db, repos, tokenUtil, paymentGateway)
+	ucs := initUsecases(db, repos, tokenUtil, paymentGateway, emailSender)
 	authMiddleware := middleware.NewAuth(tokenUtil)
 
 	return &Container{
@@ -89,17 +92,21 @@ func initRepositories(db *gorm.DB, s3Client *s3.Client, r2Bucket string) reposit
 		watchlist:      repository.NewWatchlistRepository(db),
 		storage:        repository.NewStorageRepository(s3Client, r2Bucket, ""),
 		campaignMedia:  repository.NewCampaignMediaRepository(db),
+		highlight:      repository.NewHighlightRepository(db),
+		role:           repository.NewRoleRepository(db),
 	}
 }
 
-func initUsecases(db *gorm.DB, repos repositories, tokenUtil *util.TokenUtil, paymentGateway domain.PaymentGateway) usecases {
+func initUsecases(db *gorm.DB, repos repositories, tokenUtil *util.TokenUtil, paymentGateway domain.PaymentGateway, emailSender domain.EmailSender) usecases {
 	storageUsecase := usecase.NewStorageUsecase(repos.storage, repos.campaignMedia)
+	emailUsecase := usecase.NewSendEmailUsecase(emailSender)
 	return usecases{
 		user:        usecase.NewUserUsecase(repos.user),
-		auth:        usecase.NewAuthUsecase(repos.user, repos.userAuth, tokenUtil),
+		auth:        usecase.NewAuthUsecase(repos.user, repos.userAuth, tokenUtil, emailUsecase),
 		storage:     storageUsecase,
-		company:     usecase.NewCompanyUsecase(repos.company, storageUsecase),
-		campaign:    usecase.NewCampaignUsecase(db, repos.campaign, repos.highlight, repos.campaignMedia, repos.company, repos.investmentsH, repos.escrow, storageUsecase),
+		email:       emailUsecase,
+		company:     usecase.NewCompanyUsecase(repos.company, repos.user, storageUsecase),
+		campaign:    usecase.NewCampaignUsecase(db, repos.campaign, repos.highlight, repos.campaignMedia, repos.company, repos.user, repos.investmentsH, repos.escrow, repos.watchlist, storageUsecase, emailUsecase),
 		transaction: usecase.NewTransactionUsecase(db, repos.investmentsH, repos.investmentD, repos.campaign, repos.escrow, repos.shareOwnership, repos.user, paymentGateway),
 		category:    usecase.NewCategoryUsecase(repos.category),
 		discussion:  usecase.NewDiscussionUsecase(repos.discussion),
@@ -107,6 +114,7 @@ func initUsecases(db *gorm.DB, repos repositories, tokenUtil *util.TokenUtil, pa
 		updates:     usecase.NewUpdatesUsecase(repos.updates, repos.campaign, repos.company),
 		watchlist:   usecase.NewWatchlistUsecase(repos.watchlist, repos.campaign),
 		portfolio:   usecase.NewPortfolioUsecase(repos.investmentsH, repos.shareOwnership, repos.campaign, repos.company),
+		role:        usecase.NewRoleUsecase(repos.role),
 	}
 }
 
@@ -124,6 +132,7 @@ func initControllers(ucs usecases, authMiddleware gin.HandlerFunc, googleOAuthCo
 		controllers.NewUpdatesController(ucs.updates, authMiddleware),
 		controllers.NewWatchlistController(ucs.watchlist, authMiddleware),
 		controllers.NewPortfolioController(ucs.portfolio, authMiddleware),
+		controllers.NewRoleController(ucs.role, authMiddleware),
 	}
 }
 

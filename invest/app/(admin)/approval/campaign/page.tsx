@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, X } from "lucide-react";
+import Link from "next/link";
 import {
   type ColumnDef,
   flexRender,
@@ -24,22 +25,40 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Campaign,
+  CampaignListFilter,
+  CampaignStatus,
+  formatIDR,
+  getCampaigns,
+  PaginatedCampaigns,
+  updateCampaignStatus,
+} from "@/lib/campaign";
+import { formatDate } from "@/lib/investment";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Company, CompanyListFilter, CompanyStatus, getCompanies, PaginatedCompanies, updateCompanyStatus } from "@/lib/company";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 const STATUS_VARIANT: Record<
-  CompanyStatus,
+  CampaignStatus,
   "default" | "secondary" | "outline" | "destructive"
 > = {
+  DRAFT: "outline",
+  REQUESTDATE: "outline",
   PENDING: "outline",
   ACTIVE: "default",
-  SUSPENDED: "outline",
+  FUNDED: "secondary",
+  COMPLETED: "outline",
+  FAILED: "destructive",
   REJECTED: "destructive",
-  UPDATED: "secondary",
+};
+
+const PAGE_SIZE = 10;
+
+const PendingFilter: CampaignListFilter = {
+  status: 'DRAFT',
 };
 
 function getPageNumbers(current: number, totalPages: number, siblings = 1) {
@@ -56,84 +75,51 @@ function getPageNumbers(current: number, totalPages: number, siblings = 1) {
   return range
 }
 
-const PAGE_SIZE = 5;
-
-const PendingFilter: CompanyListFilter = {
-  status: 'PENDING',
-};
-
-const UpdateFilter: CompanyListFilter = {
-  status: 'UPDATED',
-};
-
 export default function ApprovalPage() {
-  const [newCompanies, setNewCompanies] = useState<PaginatedCompanies>();
-  const [updatedCompanies, setUpdatedCompanies] = useState<PaginatedCompanies>();
+  const [campaigns, setCampaigns] = useState<PaginatedCampaigns>();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [newCompanyPage, setNewCompanyPage] = useState(1)
+  const [draftCampaignPage, setDraftCampaignPage] = useState(1)
 
-  const totalNewPages = Math.max(
+  const totalDraftPages = Math.max(
     1,
-    Math.ceil((newCompanies?.total ?? 1) / PAGE_SIZE)
-  );
-  // const totalUpdatePages = Math.max(
-  //   1,
-  //   Math.ceil((newCompanies?.total ?? 1) / PAGE_SIZE)
-  // );
-  const pages = useMemo(
-    () => getPageNumbers(newCompanyPage, totalNewPages),
-    [newCompanyPage, totalNewPages]
+    Math.ceil((campaigns?.total ?? 1) / PAGE_SIZE)
   );
 
-  // const totalNewCompanyPages = Math.max(
-  //   1,
-  //   Math.ceil((userProfile?.TxCounter ?? 1) / PAGE_SIZE)
-  // );
-  // const totalUpdatedCompanyPages = Math.max(
-  //   1,
-  //   Math.ceil((userProfile?.TxCounter ?? 1) / PAGE_SIZE)
-  // );
+  const pages = useMemo(
+    () => getPageNumbers(draftCampaignPage, totalDraftPages),
+    [draftCampaignPage, totalDraftPages]
+  );
 
   const load = useCallback(
-    async (pendingFilter: CompanyListFilter, updatedFilter: CompanyListFilter) => {
-      setLoading(true);
-      setLoadError(null);
-      try {
-        const dataNewCompany = await getCompanies(PAGE_SIZE, (newCompanyPage - 1) * PAGE_SIZE, pendingFilter);
-        const dataUpdateCompany = await getCompanies(PAGE_SIZE, 0, updatedFilter);
-        setNewCompanies(dataNewCompany);
-        setUpdatedCompanies(dataUpdateCompany);
-      } catch {
-        setLoadError("Could not load companies. Make sure the backend is running on port 8080.");
-      } finally {
-        setLoading(false);
-      }
-    },[newCompanyPage]);
+    async (pendingFilter: CampaignListFilter) => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await getCampaigns(PAGE_SIZE, (draftCampaignPage - 1) * PAGE_SIZE,pendingFilter ?? undefined);
+      setCampaigns(data);
+    } catch {
+      setLoadError(
+        "Could not load campaigns. Make sure the backend is running on port 8080."
+      );
+    } finally {
+      setLoading(false);
+    }
+  },[draftCampaignPage]);
 
   useEffect(() => {
-    load(PendingFilter, UpdateFilter);
+    load(PendingFilter);
   }, [load]);
 
-  // const pending = useMemo(
-  //   () => newc.filter((c) => c.Status === "PENDING"),
-  //   [companies]
-  // );
-
-  // const updated = useMemo(
-  //   () => companies.filter((c) => c.Status === "UPDATED"),
-  //   [companies]
-  // );
-
   const handleApprove = useCallback(
-    async (company: Company) => {
-      setBusyId(company.ID);
+    async (campaign: Campaign) => {
+      setBusyId(campaign.ID);
       setActionError(null);
       try {
-        await updateCompanyStatus(company.ID,'ACTIVE')
-        await load(PendingFilter, UpdateFilter)
+        await updateCampaignStatus(campaign.ID,"PENDING")
+        await load(PendingFilter);
       } catch (err) {
         setActionError(
           err instanceof Error ? err.message : "Approve failed"
@@ -146,13 +132,13 @@ export default function ApprovalPage() {
   );
 
   const handleReject = useCallback(
-    async (companies: Company) => {
-      // if (!window.confirm(`Reject and delete "${companies.Name}"?`)) return;
-      setBusyId(companies.ID);
+    async (campaign: Campaign) => {
+      setBusyId(campaign.ID);
       setActionError(null);
-      try{
-        await updateCompanyStatus(companies.ID,'REJECTED')
-        await load(PendingFilter, UpdateFilter)
+      
+      try {
+        await updateCampaignStatus(campaign.ID,"REJECTED")
+        await load(PendingFilter);
       } catch (err) {
         setActionError(
           err instanceof Error ? err.message : "Reject failed"
@@ -164,21 +150,34 @@ export default function ApprovalPage() {
     [load]
   );
 
-  const columns = useMemo<ColumnDef<Company>[]>(
+  const columns = useMemo<ColumnDef<Campaign>[]>(
     () => [
       {
-        accessorKey: "Name",
-        header: "Name",
+        accessorKey: "Title",
+        header: "Title",
         cell: ({ row }) => (
-          <span className="font-medium">{row.original.Name}</span>
+          <span className="font-medium">{row.original.Title}</span>
         ),
       },
       {
-        accessorKey: "Description",
-        header: "Description",
-        cell: ({ row }) => (
-          <span className="font-medium">{row.original.Description}</span>
-        ),
+        accessorKey: "FundingGoal",
+        header: "Funding goal",
+        cell: ({ row }) => formatIDR(row.original.FundingGoal),
+      },
+      {
+        accessorKey: "SharePrice",
+        header: "Share price",
+        cell: ({ row }) => formatIDR(row.original.SharePrice),
+      },
+      {
+        accessorKey: "MinInvestment",
+        header: "Min. investment",
+        cell: ({ row }) => formatIDR(row.original.MinInvestment),
+      },
+      {
+        accessorKey: "EndDate",
+        header: "Ends",
+        cell: ({ row }) => formatDate(row.original.EndDate),
       },
       {
         accessorKey: "Status",
@@ -193,9 +192,14 @@ export default function ApprovalPage() {
         id: "actions",
         header: "Actions",
         cell: ({ row }) => {
-          const company = row.original;
+          const campaign = row.original;
           return (
             <div className="flex gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/approval/campaign/${campaign.ID}`}>
+                    Review
+                  </Link>
+                </Button>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm">
@@ -207,8 +211,8 @@ export default function ApprovalPage() {
                     <p className="text-sm mb-2">Confirm approval?</p>
                     <Button
                       size="sm"
-                      disabled={busyId === company.ID}
-                      onClick={() => handleApprove(company)}
+                      disabled={busyId === campaign.ID}
+                      onClick={() => handleApprove(campaign)}
                     >
                       Approve
                     </Button>
@@ -227,8 +231,8 @@ export default function ApprovalPage() {
                     <Button
                       size="sm"
                       variant="destructive"
-                      disabled={busyId === company.ID}
-                      onClick={() => handleReject(company)}
+                      disabled={busyId === campaign.ID}
+                      onClick={() => handleReject(campaign)}
                     >
                       Reject
                     </Button>
@@ -242,14 +246,9 @@ export default function ApprovalPage() {
     [busyId, handleApprove, handleReject]
   );
 
-  const tableNewCompany = useReactTable({
-    data : newCompanies?.data ?? [],
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-    const tableUpdateCompany = useReactTable({
-    data : updatedCompanies?.data ?? [],
+  const table = useReactTable({
+    // data: pending,
+    data : campaigns?.data ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
@@ -257,9 +256,9 @@ export default function ApprovalPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-4 py-10 sm:px-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Approval</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Campaign Approval</h1>
         <p className="text-sm text-muted-foreground">
-          Review and approve pending company.
+          Review and approve pending campaigns.
         </p>
       </div>
 
@@ -272,10 +271,10 @@ export default function ApprovalPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Pending New Company
-            {!!newCompanies?.total && newCompanies.total > 0 && (
+            Pending campaigns
+            {!!campaigns?.total && campaigns.total > 0 && (
               <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({newCompanies?.total})
+                ({campaigns?.total})
               </span>
             )}
           </CardTitle>
@@ -283,21 +282,21 @@ export default function ApprovalPage() {
         <CardContent>
           {loading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Loading companies…
+              Loading campaigns…
             </p>
           ) : loadError ? (
             <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
               {loadError}
             </p>
-          ) : newCompanies?.total === 0 ? (
+          ) : campaigns?.total === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No campanies waiting for approval.
+              No campaigns waiting for approval.
             </p>
           ) : (
             <div className="rounded-md border">
               <Table>
                 <TableHeader>
-                  {tableNewCompany.getHeaderGroups().map((headerGroup) => (
+                  {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
                         <TableHead key={header.id}>
@@ -337,7 +336,7 @@ export default function ApprovalPage() {
                   ))}
                 </TableBody> */}
                 <TableBody>
-                  {tableNewCompany.getRowModel().rows.map((row) => (
+                  {table.getRowModel().rows.map((row) => (
                     <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
@@ -355,117 +354,54 @@ export default function ApprovalPage() {
           )}
         </CardContent>
       </Card>
-    <Pagination>
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              setNewCompanyPage((p) => Math.max(1, p - 1))
-            }}
-            className={newCompanyPage === 1 ? "pointer-events-none opacity-50" : undefined}
-          />
-        </PaginationItem>
-
-        {pages.map((p, i) =>
-          p === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${i}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={p}>
-              <PaginationLink
-                href="#"
-                isActive={p === newCompanyPage}
-                onClick={(e) => {
-                  e.preventDefault()
-                  setNewCompanyPage(p)
-                }}
-              >
-                {p}
-              </PaginationLink>
-            </PaginationItem>
-          )
-        )}
-
-        <PaginationItem>
-          <PaginationNext
-            href="#"
-            onClick={(e) => {
-              e.preventDefault()
-              setNewCompanyPage((p) => Math.min(totalNewPages, p + 1))
-            }}
-            className={
-              newCompanyPage === totalNewPages ? "pointer-events-none opacity-50" : undefined
-            }
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setDraftCampaignPage((p) => Math.max(1, p - 1))
+                  }}
+                  className={draftCampaignPage === 1 ? "pointer-events-none opacity-50" : undefined}
+                />
+              </PaginationItem>
       
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>
-            Requested Update Company
-            {!!updatedCompanies?.total && updatedCompanies?.total > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({updatedCompanies.total})
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Loading companies…
-            </p>
-          ) : loadError ? (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {loadError}
-            </p>
-          ) : updatedCompanies?.total === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No campanies waiting for approval.
-            </p>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  {tableUpdateCompany.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {tableUpdateCompany.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card> */}
+              {pages.map((p, i) =>
+                p === "ellipsis" ? (
+                  <PaginationItem key={`ellipsis-${i}`}>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                ) : (
+                  <PaginationItem key={p}>
+                    <PaginationLink
+                      href="#"
+                      isActive={p === draftCampaignPage}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setDraftCampaignPage(p)
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                )
+              )}
+      
+              <PaginationItem>
+                <PaginationNext
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setDraftCampaignPage((p) => Math.min(totalDraftPages, p + 1))
+                  }}
+                  className={
+                    draftCampaignPage === totalDraftPages ? "pointer-events-none opacity-50" : undefined
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
     </main>
   );
 }

@@ -18,7 +18,7 @@ type UpdatesRepository interface {
 	FindByCampaignID(ctx context.Context, campaignID uint32, limit, offset int) ([]domain.Updates, error)
 	Update(ctx context.Context, update *domain.Updates) error
 	Delete(ctx context.Context, id uint32) error
-	FindByUserID(ctx context.Context, userId uint32, limit, offset int) ([]domain.Updates, error)
+	FindByUserIDCursor(ctx context.Context, userId uint32, cursor uint32, limit int) ([]domain.Updates, error)
 }
 
 func NewUpdatesRepository(db *gorm.DB) UpdatesRepository {
@@ -47,14 +47,19 @@ func (r *updatesRepository) FindByCampaignID(ctx context.Context, campaignID uin
 	return updates, err
 }
 
-func (r *updatesRepository) FindByUserID(ctx context.Context, userId uint32, limit, offset int) ([]domain.Updates, error) {
+func (r *updatesRepository) FindByUserIDCursor(ctx context.Context, userId uint32, cursor uint32, limit int) ([]domain.Updates, error) {
 	var updates []domain.Updates
-	err := r.DB.WithContext(ctx).
+	query := r.DB.WithContext(ctx).
 		Model(&domain.Updates{}).
-		Joins("JOIN investment_h ih ON ih.campaignid = updates.campaignid").
-		Where("ih.userid = ?", userId).
-		Order("updates.created_at DESC").
-		Limit(limit).Offset(offset).
+		Distinct("updates.*").
+		Joins("JOIN investments_h ih ON ih.campaignid = updates.campaignid").
+		Where("ih.userid = ?", userId)
+	if cursor > 0 {
+		query = query.Where("updates.id < ?", cursor)
+	}
+	err := query.
+		Order("updates.id DESC").
+		Limit(limit).
 		Find(&updates).Error
 	return updates, err
 }

@@ -26,7 +26,7 @@ out/
 *.swo
 
 # AI
-AGENT.md
+AGENTS.md
 
 #Test
 invest/app/(main)/test/page.tsx

@@ -14,12 +14,15 @@ type Config struct {
 	Port     int
 	Username string
 	Password string
+	From string
 }
 
 type Sender struct {
 	cfg  Config
 	auth smtp.Auth
 }
+
+var _ domain.EmailSender = (*Sender)(nil)
 
 func NewSender(cfg Config) *Sender {
 	return &Sender{
@@ -29,8 +32,13 @@ func NewSender(cfg Config) *Sender {
 }
 
 func (s *Sender) Send(email domain.Email) error {
+	from := email.From
+	if from.Address == "" {
+		from = mail.Address{Address: s.cfg.From}
+	}
+
 	var msg bytes.Buffer
-	msg.WriteString(fmt.Sprintf("From: %s\r\n", email.From.String()))
+	msg.WriteString(fmt.Sprintf("From: %s\r\n", from.String()))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", joinAddresses(email.To)))
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", email.Subject))
 	contentType := "text/plain"
@@ -46,7 +54,7 @@ func (s *Sender) Send(email domain.Email) error {
 	}
 
 	addr := fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
-	return smtp.SendMail(addr, s.auth, email.From.Address, recipients, msg.Bytes())
+	return smtp.SendMail(addr, s.auth, from.Address, recipients, msg.Bytes())
 }
 
 func joinAddresses(addrs []mail.Address) string {

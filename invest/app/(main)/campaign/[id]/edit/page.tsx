@@ -23,6 +23,7 @@ import { getCurrentSession } from "@/lib/user";
 interface CampaignFormValues {
   title: string;
   description: string;
+  overview : string;
   valuation: string;
   fundingGoal: string;
   minInvestment: string;
@@ -50,6 +51,7 @@ export default function EditCampaignPage() {
   const [form, setForm] = useState<CampaignFormValues>({
     title: "",
     description: "",
+    overview: "",
     valuation: "",
     fundingGoal: "",
     minInvestment: "",
@@ -100,6 +102,7 @@ export default function EditCampaignPage() {
           setForm({
             title: data.Title,
             description: data.Description,
+            overview: data.Overview,
             valuation: String(data.Valuation),
             fundingGoal: String(data.FundingGoal),
             minInvestment: String(data.MinInvestment),
@@ -129,12 +132,14 @@ export default function EditCampaignPage() {
       const updated = await updateCampaign(campaign.ID, {
         title: form.title.trim(),
         description: form.description.trim(),
+        overview: form.description.trim(),
         valuation: Number(form.valuation),
         funding_goal: Number(form.fundingGoal),
         min_investment: Number(form.minInvestment),
         share_price: Number(form.sharePrice),
         start_date: new Date(form.startDate).toISOString(),
         end_date: new Date(form.endDate).toISOString(),
+        highlight : []
       });
       router.push(`/campaign/${updated.ID}`);
     } catch (err) {
@@ -247,6 +252,15 @@ export default function EditCampaignPage() {
                 value={form.description}
                 onChange={(e) => updateField("description", e.target.value)}
                 placeholder="Describe your campaign"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="overview">Overview</Label>
+              <Textarea
+                id="overview"
+                value={form.description}
+                onChange={(e) => updateField("overview", e.target.value)}
+                placeholder="Overview of your campaign"
               />
             </div>
           </CardContent>

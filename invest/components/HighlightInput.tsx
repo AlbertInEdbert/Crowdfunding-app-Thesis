@@ -31,31 +31,31 @@ let uidCounter = 0;
 const newUid = () => `highlight-${Date.now().toString(36)}-${uidCounter++}`;
 
 export const createHighlight = (): Highlight => ({
-  uid: newUid(),
-  seqNo: 1,
-  title: "",
-  description: "",
+  Uid: newUid(),
+  SeqNo: 1,
+  Title: "",
+  Description: "",
 });
 
 const renumber = (list: Highlight[]): Highlight[] =>
-  list.map((h, i) => ({ ...h, seqNo: i + 1 }));
+  list.map((h, i) => ({ ...h, SeqNo: i + 1 }));
 
 export const toHighlights = (
-  rows: { seqNo: number; title: string; description: string }[]
+  rows: { SeqNo: number; Title: string; Description: string }[]
 ): Highlight[] =>
   renumber(
     [...rows]
-      .sort((a, b) => a.seqNo - b.seqNo)
-      .map((r) => ({ ...r, uid: newUid() }))
+      .sort((a, b) => a.SeqNo - b.SeqNo)
+      .map((r) => ({ ...r, Uid: newUid() }))
   );
 
 export const toPayload = (list: Highlight[]) =>
   list
-    .filter((h) => h.title.trim() || h.description.trim())
+    .filter((h) => h.Title.trim() || h.Description.trim())
     .map((h, i) => ({
       seqNo: i + 1,
-      title: h.title,
-      description: h.description,
+      title: h.Title,
+      description: h.Description,
     }));
 
 function SortableRow({
@@ -77,7 +77,7 @@ function SortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.uid });
+  } = useSortable({ id: item.Uid });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -110,8 +110,8 @@ function SortableRow({
       </span>
 
       <HighlightField
-        title={item.title}
-        description={item.description}
+        title={item.Title}
+        description={item.Description}
         onChange={onChange}
       />
 
@@ -160,18 +160,18 @@ export default function HighlightsInput({
     const { active, over } = event;
     if (!over || active.id === over.id) return;
  
-    const from = value.findIndex((i) => i.uid === active.id);
-    const to = value.findIndex((i) => i.uid === over.id);
+    const from = value.findIndex((i) => i.Uid === active.id);
+    const to = value.findIndex((i) => i.Uid === over.id);
     emit(arrayMove(value, from, to));
   };
   const add = () => {
     if (value.length < max) emit([...value, createHighlight()]);
   };
  
-  const remove = (uid: string) => emit(value.filter((i) => i.uid !== uid));
+  const remove = (uid: string) => emit(value.filter((i) => i.Uid !== uid));
  
   const update = (uid: string, field: Field, text: string) =>
-    emit(value.map((i) => (i.uid === uid ? { ...i, [field]: text } : i)));
+    emit(value.map((i) => (i.Uid === uid ? { ...i, [field]: text } : i)));
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>
@@ -186,17 +186,17 @@ export default function HighlightsInput({
         onDragEnd={handleDragEnd}
       >
         <SortableContext
-          items={value.map((i) => i.uid)}
+          items={value.map((i) => i.Uid)}
           strategy={verticalListSortingStrategy}
         >
           <div className="flex flex-col gap-2">
             {value.map((item, index) => (
               <SortableRow
-                key={item.uid}
+                key={item.Uid}
                 item={item}
                 position={index + 1}
-                onChange={(field, text) => update(item.uid, field, text)}
-                onRemove={() => remove(item.uid)}
+                onChange={(field, text) => update(item.Uid, field, text)}
+                onRemove={() => remove(item.Uid)}
               />
             ))}
           </div>

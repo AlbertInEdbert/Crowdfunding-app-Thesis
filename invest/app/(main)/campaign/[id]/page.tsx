@@ -47,7 +47,7 @@ export default function CampaignDetailPage() {
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [legelFile,setLegelFile] = useState<CompanyFile[] | null>(null);
-  const [campaignMedia, setCampaignMedia] = useState<CampaignMedia[] | null>(null);
+  const [campaignMedia, setCampaignMedia] = useState<CampaignMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -130,8 +130,10 @@ export default function CampaignDetailPage() {
       </main>
     );
   }
-
-  const images = galleryImages(campaignMedia);
+  const images = campaignMedia.filter((m) => m.MediaCode === "COVER" || m.Category === "image");
+  const videos = campaignMedia.filter((m) => m.MediaCode === "VIDEO" || m.Category === "video");
+  const posterUrl = images[0]?.URL;
+  // const images = galleryImages(campaignMedia);
   const progress = fundingProgress(campaign.FundingGoal,campaign.FundingAmount);
   const daysLeft = daysRemaining(campaign.EndDate);
   const minShares = Math.max(
@@ -217,71 +219,28 @@ export default function CampaignDetailPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[2fr_1fr]">
         <div className="flex flex-col gap-3">
           <div className="relative aspect-video w-full overflow-hidden rounded-lg bg-muted">
-            <img
-              // src={images[selectedImage]}
-              src={images[selectedImage]}
-              alt={campaign.Title}
-              className="h-full w-full object-cover"
-            />
-            {/* <button
-              type="button"
-              aria-label="Play video"
-              className="absolute left-1/2 top-1/2 flex h-20 w-20 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border-4 border-white/90 bg-black/20 text-white transition hover:bg-black/40"
-            >
-              <Play className="h-8 w-8 fill-current" />
-              <span className="text-[10px] font-semibold tracking-widest">
-                PLAY
-              </span>
-            </button> */}
-            {/* <button
-              type="button"
-              aria-label="Next image"
-              onClick={() =>
-                setSelectedImage((i) => (i + 1) % images.length)
-              }
-              className="absolute right-3 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow transition hover:bg-white"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button> */}
+            {videos.length > 0 ? (
+              videos.map((item) => (
+                <video
+                  key={item.ID}
+                  src={item.URL}
+                  poster={posterUrl}
+                  controls
+                  preload="metadata"
+                  className="aspect-video w-full rounded-md border bg-black object-cover"
+                />
+              ))
+            ) : (
+              images.map((item) => (
+                <img
+                  key={item.ID}
+                  src={item.URL}
+                  alt={item.FileName}
+                  className="h-full w-full object-cover"
+                />
+              ))
+            )}
           </div>
-
-          {/* <div className="relative">
-            <div className="flex gap-3 overflow-hidden">
-              {images.map((src, i) => (
-                <button
-                  key={src}
-                  type="button"
-                  onClick={() => setSelectedImage(i)}
-                  className={cn(
-                    "relative aspect-video w-24 shrink-0 overflow-hidden rounded-md sm:w-28",
-                    i === selectedImage &&
-                      "ring-2 ring-blue-600 ring-offset-2"
-                  )}
-                >
-                  <img
-                    src={src}
-                    alt={`${campaign.Title} thumbnail ${i + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                  {i === 0 && (
-                    <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <Play className="h-5 w-5 fill-white text-white" />
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <button
-              type="button"
-              aria-label="Scroll thumbnails"
-              onClick={() =>
-                setSelectedImage((i) => (i + 1) % images.length)
-              }
-              className="absolute -right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-white text-slate-700 shadow-md transition hover:bg-slate-50"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div> */}
         </div>
 
         <aside className="flex flex-col gap-5">

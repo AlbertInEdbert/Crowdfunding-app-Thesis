@@ -19,6 +19,7 @@ type WatchlistRepository interface {
 	Create(ctx context.Context, userID, campaignID uint32) error
 	DeleteByUserAndCampaign(ctx context.Context, userID, campaignID uint32) error
 	FindCampaignIDsByUser(ctx context.Context, userID uint32) ([]uint32, error)
+	FindUserIDsByCampaign(ctx context.Context, campaignID uint32) ([]uint32, error)
 	Exists(ctx context.Context, userID, campaignID uint32) (bool, error)
 }
 
@@ -84,6 +85,16 @@ func (r *watchlistRepository) FindCampaignIDsByUser(ctx context.Context, userID 
 		Order("watchlist.added_at DESC").
 		Pluck("watchlist.campaignid", &campaignIDs).Error
 	return campaignIDs, err
+}
+
+func (r *watchlistRepository) FindUserIDsByCampaign(ctx context.Context, campaignID uint32) ([]uint32, error) {
+	var userIDs []uint32
+	err := r.DB.WithContext(ctx).
+		Model(&domain.Watchlist{}).
+		Joins("JOIN watchlist_user ON watchlist_user.watchlistid = watchlist.id").
+		Where("watchlist.campaignid = ?", campaignID).
+		Pluck("watchlist_user.useruser_id", &userIDs).Error
+	return userIDs, err
 }
 
 func (r *watchlistRepository) Exists(ctx context.Context, userID, campaignID uint32) (bool, error) {

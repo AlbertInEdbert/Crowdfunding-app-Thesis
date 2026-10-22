@@ -2,14 +2,14 @@
 
 import { Suspense } from "react";
 
-import LoginForm from "@/components/SigninForm";
+import SignupForm from "@/components/SignupForm";
 
 const page = () => {
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
       <div className="w-full max-w-sm">
         <Suspense>
-          <LoginForm />
+          <SignupForm />
         </Suspense>
       </div>
     </div>

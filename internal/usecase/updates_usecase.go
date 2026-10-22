@@ -9,7 +9,7 @@ import (
 
 type UpdatesUsecase interface {
 	FindCampaignUpdates(ctx context.Context, campaignID uint32, limit, offset int) ([]domain.Updates, error)
-	FindCampaignUpdatesByUserId(ctx context.Context, userId uint32, limit, offset int) ([]domain.Updates, error)
+	FindUpdatesByUserIdCursor(ctx context.Context, userId uint32, cursor uint32, limit int) ([]domain.Updates, uint32, error)
 	CreateUpdate(ctx context.Context, userID, campaignID uint32, title, content string) (*domain.Updates, error)
 	UpdateUpdate(ctx context.Context, userID, id uint32, title, content string) (*domain.Updates, error)
 	DeleteUpdate(ctx context.Context, userID, id uint32) error
@@ -44,8 +44,18 @@ func (u *updatesUsecase) FindCampaignUpdates(ctx context.Context, campaignID uin
 	return u.updatesRepo.FindByCampaignID(ctx, campaignID, limit, offset)
 }
 
-func (u *updatesUsecase) FindCampaignUpdatesByUserId(ctx context.Context, userId uint32, limit, offset int) ([]domain.Updates, error) {
-	return u.updatesRepo.FindByCampaignID(ctx, userId, limit, offset)
+
+func (u *updatesUsecase) FindUpdatesByUserIdCursor(ctx context.Context, userId uint32, cursor uint32, limit int) ([]domain.Updates, uint32, error) {
+	updates, err := u.updatesRepo.FindByUserIDCursor(ctx, userId, cursor, limit+1)
+	if err != nil {
+		return nil, 0, err
+	}
+	var nextCursor uint32
+	if len(updates) > limit {
+		updates = updates[:limit]
+		nextCursor = updates[limit-1].ID
+	}
+	return updates, nextCursor, nil
 }
 
 func (u *updatesUsecase) CreateUpdate(ctx context.Context, userID, campaignID uint32, title, content string) (*domain.Updates, error) {

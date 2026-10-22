@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"encoding/json"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -29,6 +31,7 @@ func (ctrl *CampaignController) RegisterRoutes(rg *gin.RouterGroup) {
 	campaigns.GET("", ctrl.FindAllCampaign)
 	campaigns.GET("explore", ctrl.FindAllCampaignAndCover)
 	campaigns.GET("/:id", ctrl.GetByID)
+	campaigns.GET("/highlight/:id", ctrl.GetCampaignHighlight)
 	campaigns.GET("/status/:status", ctrl.GetByStatus)
 	campaigns.GET("/company/:company-id", ctrl.GetByCompanyID)
 
@@ -58,6 +61,23 @@ func (ctrl *CampaignController) GetByID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, campaign)
+}
+
+func (ctrl *CampaignController)GetCampaignHighlight(c *gin.Context) {
+	campaignId, err := parseUint32Param(c, "id")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid campaign id"})
+		return
+	}
+
+	highlight, err := ctrl.campaignUsecase.GetCampaignHighlight(c.Request.Context(), campaignId)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "campaign not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, highlight)
+
 }
 
 func (ctrl *CampaignController) GetByIDWithRelations(c *gin.Context) {
@@ -182,6 +202,12 @@ func (ctrl *CampaignController) Create(c *gin.Context) {
 		return
 	}
 
+	var highlights []dto.CreateHighlightRequest
+	if err := json.Unmarshal([]byte(campaign.Highlights), &highlights); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid highlights json: " + err.Error()})
+		return
+	}
+	
 	files, closers, err := collectCampaignFiles(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read uploaded files"})
@@ -193,8 +219,12 @@ func (ctrl *CampaignController) Create(c *gin.Context) {
 		}
 	}()
 
-	created, err := ctrl.campaignUsecase.CreateCampaign(c.Request.Context(), &campaign, companyId, session.UserID, files)
+	created, err := ctrl.campaignUsecase.CreateCampaign(c.Request.Context(), &campaign, companyId, session.UserID, files,highlights)
 	if err != nil {
+		if errors.Is(err, domain.ErrPhoneNumberRequired) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

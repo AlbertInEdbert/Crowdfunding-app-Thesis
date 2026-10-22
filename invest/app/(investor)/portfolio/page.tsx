@@ -113,14 +113,6 @@ export default function PortfolioPage() {
     load();
   }, [load]);
 
-  // const totalInvested = useMemo(
-  //   () =>
-  //     investments
-  //       .filter((i) => i.Status === "PAID")
-  //       .reduce((sum, i) => sum + i.Amount, 0),
-  //   [investments]
-  // );
-
   if (unauthenticated) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 sm:px-6">

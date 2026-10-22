@@ -6,14 +6,21 @@ import (
 	"github.com/SamuelLazuardy/investment/internal/domain"
 )
 
+type CreateHighlightRequest struct{
+	SeqNo  	uint32    		`json:"seqno" binding:"required"`
+	Title  	string    		`json:"title" binding:"required"`
+	Description  	string    		`json:"description" binding:"required"`
+}
+
 type CreateCampaignRequest struct {
 	Title         string             `json:"title" form:"title" binding:"required"`
 	Description   string             `json:"description" form:"description"`
+	Overview   string             `json:"overview" form:"overview"`
 	Valuation     int64              `json:"valuation" form:"valuation" binding:"required,gt=0"`
 	FundingGoal   int64              `json:"funding_goal" form:"funding_goal" binding:"required,gt=0"`
 	MinInvestment int64              `json:"min_investment" form:"min_investment" binding:"required,gt=0"`
 	SharePrice    int64              `json:"share_price" form:"share_price" binding:"required,gt=0"`
-	Highlight     []domain.Highlight `json:"highlights" form:"highlights" binding:"required"`
+	Highlights  	string    		`json:"highlights" form:"highlights" binding:"required"`
 	StartDate     time.Time          `json:"start_date" form:"start_date" time_format:"2006-01-02T15:04:05Z07:00"`
 	EndDate       time.Time          `json:"end_date" form:"end_date" binding:"omitempty,gtfield=StartDate" time_format:"2006-01-02T15:04:05Z07:00"`
 }

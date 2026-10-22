@@ -97,6 +97,10 @@ func (u *transactionUsecase) FindByCampaignID(ctx context.Context, campaignID ui
 }
 
 func (u *transactionUsecase) CreateInvestment(ctx context.Context, userID uint32, campaignID uint32,req *dto.CreateInvestmentRequest) (*domain.InvestmentsH, error) {
+	if err := requirePhoneNumber(ctx, u.userRepo, userID); err != nil {
+		return nil, err
+	}
+
 	campaign, err := u.campaignRepo.FindByID(ctx, campaignID)
 	if err != nil {
 		return nil, fmt.Errorf("campaign could not be retrieved: %w", err)

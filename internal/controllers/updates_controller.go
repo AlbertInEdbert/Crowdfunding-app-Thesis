@@ -57,15 +57,18 @@ func (ctrl *UpdatesController) FindUpdatesByUserId(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	cursor, _ := strconv.ParseUint(c.DefaultQuery("cursor", "0"), 10, 32)
 
-	updates, err := ctrl.updatesUsecase.FindCampaignUpdates(c.Request.Context(), session.UserID, limit, offset)
+	updates, nextCursor, err := ctrl.updatesUsecase.FindUpdatesByUserIdCursor(c.Request.Context(), session.UserID, uint32(cursor), limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not retrieve updates"})
 		return
 	}
+	if updates == nil {
+		updates = []domain.Updates{}
+	}
 
-	c.JSON(http.StatusOK, updates)
+	c.JSON(http.StatusOK, gin.H{"data": updates, "next_cursor": nextCursor})
 }
 
 func (ctrl *UpdatesController) CreateUpdate(c *gin.Context) {

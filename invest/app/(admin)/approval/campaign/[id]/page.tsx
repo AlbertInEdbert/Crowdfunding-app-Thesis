@@ -104,7 +104,7 @@ export default function ApprovalCampaignDetailPage() {
           const mediaData = await getCampaignMedia(campaignId);
           if (!cancelled) setMedia(mediaData ?? []);
         } catch {
-          // Media is supplementary; the review can continue without it.
+          
         }
 
         try {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"net/mail"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -14,6 +16,8 @@ import (
 	"github.com/SamuelLazuardy/investment/internal/repository"
 	"github.com/SamuelLazuardy/investment/internal/util"
 )
+
+const defaultRoleID uint32 = 9
 
 type AuthUsecase interface {
 	Register(ctx context.Context, req *dto.RegisterRequest) (*domain.User, error)
@@ -27,13 +31,15 @@ type authUsecase struct {
 	userRepo     repository.UserRepository
 	tokenUtil    *util.TokenUtil
 	userAuthRepo repository.UserAuthenticationRepository
+	emailUsecase SendEmailUsecase
 }
 
-func NewAuthUsecase(userRepo repository.UserRepository, userAuthRepo repository.UserAuthenticationRepository, tokenUtil *util.TokenUtil) AuthUsecase {
+func NewAuthUsecase(userRepo repository.UserRepository, userAuthRepo repository.UserAuthenticationRepository, tokenUtil *util.TokenUtil, emailUsecase SendEmailUsecase) AuthUsecase {
 	return &authUsecase{
 		userRepo:     userRepo,
 		tokenUtil:    tokenUtil,
 		userAuthRepo: userAuthRepo,
+		emailUsecase: emailUsecase,
 	}
 }
 
@@ -52,13 +58,27 @@ func (u *authUsecase) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		Email:     req.Email,
 		Password:  string(hashed),
 		Name:      req.Name,
-		RoleID:    7,
+		RoleID:    defaultRoleID,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
 
 	if err := u.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("user could not be created: %w", err)
+	}
+
+	if u.emailUsecase != nil {
+		err := u.emailUsecase.Send(domain.Email{
+			To:      []mail.Address{{Name: user.Name, Address: user.Email}},
+			Subject: "Welcome to Invest",
+			Body: fmt.Sprintf(
+				"Hi %s,\n\nYour account has been created successfully. You can now sign in and start exploring campaigns.\n\nThanks for joining!",
+				user.Name,
+			),
+		})
+		if err != nil {
+			log.Printf("welcome email to %s failed: %v", user.Email, err)
+		}
 	}
 
 	return user, nil
@@ -170,7 +190,7 @@ func (u *authUsecase) findOrCreateGoogleUser(ctx context.Context, info *oauth.Go
 			Email:      info.Email,
 			Name:       info.Name,
 			Password:   "",
-			RoleID:     7,
+			RoleID:     defaultRoleID,
 			CreatedAt:  time.Now(),
 			UpdatedAt:  time.Now(),
 		}

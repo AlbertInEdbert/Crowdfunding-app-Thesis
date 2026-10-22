@@ -188,7 +188,8 @@ func writeInvestmentError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrCancelWindowClosed),
 		errors.Is(err, domain.ErrCampaignNotActive),
 		errors.Is(err, domain.ErrBelowMinInvestment),
-		errors.Is(err, domain.ErrExceedsFundingGoal):
+		errors.Is(err, domain.ErrExceedsFundingGoal),
+		errors.Is(err, domain.ErrPhoneNumberRequired):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

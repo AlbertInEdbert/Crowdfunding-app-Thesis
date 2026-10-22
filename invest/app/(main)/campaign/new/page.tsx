@@ -80,6 +80,7 @@ export default function newCompanyPage() {
     defaultValues: {
       title: "",
       description : "",
+      overview : "",
       valuation: "",
       fundingGoal: "",
       minInvestment: "",
@@ -92,9 +93,9 @@ export default function newCompanyPage() {
       setSubmitError(null);
 
       highlights.forEach(element => {
-        console.log(element.seqNo)
-        console.log(element.title)
-        console.log(element.description)
+        console.log(element.SeqNo)
+        console.log(element.Title)
+        console.log(element.Description)
       });
 
       try {
@@ -103,6 +104,7 @@ export default function newCompanyPage() {
           {
             title: value.title.trim(),
             description: value.description.trim(),
+            overview : value.description.trim(),
             valuation: Number(value.valuation),
             funding_goal: Number(value.fundingGoal),
             min_investment: Number(value.minInvestment),
@@ -225,6 +227,23 @@ export default function newCompanyPage() {
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     placeholder="Describe your campaign"
+                  />
+                </div>
+              )}
+            />
+            
+            <form.Field
+              name="overview"
+              children={(field) => (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={field.name}>Description</Label>
+                  <Textarea
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Overview of your campaign"
                   />
                 </div>
               )}
@@ -405,8 +424,14 @@ export default function newCompanyPage() {
             <form.Field
               name="startDate"
               validators={{
-                onChange: ({ value }) =>
-                  !value ? "Start date is required" : undefined,
+                onChange: ({ value }) => {
+                  !value ? "Start date is required" : undefined;
+                  const diffDays = (new Date(value).getTime() - new Date().getTime()) /(1000 * 60 * 60 * 24);
+                  if (diffDays < 14) return "Start date must be 2 week or more from first campaign request";
+                }
+                  
+                
+                
               }}
               children={(field) => (
                 <div className="flex flex-col gap-2">
@@ -437,9 +462,7 @@ export default function newCompanyPage() {
 
                   const startDate = fieldApi.form.getFieldValue("startDate");
                   if (startDate) {
-                    const diffDays =
-                      (new Date(value).getTime() - new Date(startDate).getTime()) /
-                      (1000 * 60 * 60 * 24);
+                    const diffDays = (new Date(value).getTime() - new Date(startDate).getTime()) /(1000 * 60 * 60 * 24);
 
                     if (diffDays < 0) return "End date must be after start date";
                     if (diffDays > 45) return "End date must not be more than 45 days after start date";

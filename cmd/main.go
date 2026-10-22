@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/SamuelLazuardy/investment/bootstrap"
 	"github.com/SamuelLazuardy/investment/internal/delivery/http/route"
 	"github.com/SamuelLazuardy/investment/internal/infra/config"
+	"github.com/SamuelLazuardy/investment/internal/infra/smtp"
 	"github.com/gin-gonic/gin"
 
 	"github.com/joho/godotenv"
@@ -50,8 +52,20 @@ func main() {
 
 	cfg := config.LoadStorageConfig()
 	r2Client := config.NewR2Client(cfg)
-	
-	c := bootstrap.NewContainer(gormDB, redisClient, r2Client, os.Getenv("R2_BUCKET_NAME"))
+
+	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	if os.Getenv("SMTP_HOST") == "" {
+		log.Println("SMTP_HOST is not set; outgoing email (e.g. welcome emails) will fail")
+	}
+	emailSender := smtp.NewSender(smtp.Config{
+		Host:     os.Getenv("SMTP_HOST"),
+		Port:     smtpPort,
+		Username: os.Getenv("SMTP_USERNAME"),
+		Password: os.Getenv("SMTP_PASSWORD"),
+		From:     os.Getenv("SMTP_FROM"),
+	})
+
+	c := bootstrap.NewContainer(gormDB, redisClient, r2Client, os.Getenv("R2_BUCKET_NAME"), emailSender)
 	router.SetupRouter(r, c.Controllers...)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

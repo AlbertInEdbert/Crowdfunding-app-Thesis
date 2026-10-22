@@ -1,3 +1,5 @@
+import { json } from "stream/consumers";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export type CampaignStatus =
@@ -13,6 +15,7 @@ export interface Campaign {
   ID: number;
   Title: string;
   Description : string;
+  Overview : string;
   Valuation: number;
   FundingAmount: number;
   FundingGoal: number;
@@ -28,10 +31,10 @@ export interface Campaign {
 }
 
 export type Highlight = {
-  uid: string;
-  seqNo: number;
-  title: string;
-  description: string;
+  Uid: string;
+  SeqNo: number;
+  Title: string;
+  Description: string;
 };
 
 export interface CampaignListFilter {
@@ -144,6 +147,7 @@ export async function getCampaignsByCompany(
 export interface CreateCampaignInput {
   title: string;
   description: string;
+  overview: string;
   valuation: number;
   funding_goal: number;
   min_investment: number;
@@ -184,10 +188,10 @@ export async function createCampaign(
   body.set("funding_goal", String(input.funding_goal));
   body.set("min_investment", String(input.min_investment));
   body.set("share_price", String(input.share_price));
-  body.set("highlights", String(input.highlight));
+  body.set("highlights", JSON.stringify(input.highlight));
   body.set("start_date", input.start_date);
   body.set("end_date", input.end_date);
-
+  console.log(input.highlight)
   const [cover, ...rest] = files;
   if (cover) body.set("COVER", cover);
   for (const file of rest) body.append("files", file);
@@ -285,6 +289,20 @@ export async function updateCampaignDate(campaignId : number,newStatus : Campaig
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch campaign: ${res.status}`);
+  }
+  return res.json();
+}
+
+
+export async function getCampaignHighlights(
+  campaignId : number
+): Promise<Highlight[]> {
+
+  const res = await fetch(`${API_URL}/api/v1/campaign/highlight/${campaignId}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch campaigns highlight: ${res.status}`);
   }
   return res.json();
 }

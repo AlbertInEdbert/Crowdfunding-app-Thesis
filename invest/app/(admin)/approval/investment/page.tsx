@@ -41,10 +41,13 @@ const STATUS_VARIANT: Record<
   "default" | "secondary" | "outline" | "destructive"
 > = {
   DRAFT: "outline",
+  PENDING: "secondary",
+  REQUESTDATE: "outline",
   ACTIVE: "default",
   FUNDED: "secondary",
   COMPLETED: "outline",
   FAILED: "destructive",
+  REJECTED: "destructive",
 };
 
 export default function ApprovalPage() {
@@ -59,7 +62,7 @@ export default function ApprovalPage() {
     setLoadError(null);
     try {
       const data = await getCampaigns(100, 0);
-      setCampaigns(data ?? []);
+      setCampaigns(data?.data ?? []);
     } catch {
       setLoadError(
         "Could not load campaigns. Make sure the backend is running on port 8080."
