@@ -32,6 +32,7 @@ func NewSender(cfg Config) *Sender {
 }
 
 func (s *Sender) Send(email domain.Email) error {
+	
 	from := email.From
 	if from.Address == "" {
 		from = mail.Address{Address: s.cfg.From}
@@ -46,7 +47,8 @@ func (s *Sender) Send(email domain.Email) error {
 		contentType = "text/html"
 	}
 	msg.WriteString(fmt.Sprintf("MIME-Version: 1.0\r\nContent-Type: %s; charset=\"utf-8\"\r\n", contentType))
-	msg.WriteString("\r\n" + email.Body)
+	msg.WriteString("\r\n")
+	msg.WriteString(email.Body)
 
 	recipients := make([]string, len(email.To))
 	for i, t := range email.To {

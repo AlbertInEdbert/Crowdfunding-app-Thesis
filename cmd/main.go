@@ -54,8 +54,9 @@ func main() {
 	r2Client := config.NewR2Client(cfg)
 
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
+	
 	if os.Getenv("SMTP_HOST") == "" {
-		log.Println("SMTP_HOST is not set; outgoing email (e.g. welcome emails) will fail")
+		log.Println("SMTP_HOST is not set")
 	}
 	emailSender := smtp.NewSender(smtp.Config{
 		Host:     os.Getenv("SMTP_HOST"),

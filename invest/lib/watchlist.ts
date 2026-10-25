@@ -1,8 +1,27 @@
-import { Campaign } from "./campaign";
+import { Campaign, CampaignStatus } from "./campaign";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-export async function getWatchlist(): Promise<Campaign[]> {
+export interface CampaignWatchlist {
+  id: number;
+  title: string;
+  valuation: number;
+  fundingAmount: number;
+  fundingGoal: number;
+  status: CampaignStatus;
+  startDate: string;
+  endDate: string;
+  companyName: string;
+  categoryName: string;
+}
+
+export interface PaginatedWatchlist {
+  data: CampaignWatchlist[];
+  total: number;
+}
+
+
+export async function getWatchlist(): Promise<PaginatedWatchlist> {
   const res = await fetch(`${API_URL}/api/v1/watchlist`, {
     credentials: "include",
     cache: "no-store",

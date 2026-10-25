@@ -112,7 +112,7 @@ func initUsecases(db *gorm.DB, repos repositories, tokenUtil *util.TokenUtil, pa
 		discussion:  usecase.NewDiscussionUsecase(repos.discussion),
 		review:      usecase.NewReviewUsecase(repos.review),
 		updates:     usecase.NewUpdatesUsecase(repos.updates, repos.campaign, repos.company),
-		watchlist:   usecase.NewWatchlistUsecase(repos.watchlist, repos.campaign),
+		watchlist:   usecase.NewWatchlistUsecase(repos.watchlist, repos.campaign,repos.category,repos.company),
 		portfolio:   usecase.NewPortfolioUsecase(repos.investmentsH, repos.shareOwnership, repos.campaign, repos.company),
 		role:        usecase.NewRoleUsecase(repos.role),
 	}

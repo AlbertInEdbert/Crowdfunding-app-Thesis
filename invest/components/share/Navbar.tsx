@@ -10,8 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { Button } from "../ui/button";
 import { useRouter, usePathname } from "next/navigation";
 
-// Routes where the navbar should not appear (auth screens).
-const HIDDEN_PATHS = ["/sign-in", "/sign-up", "/login"];
+const HIDDEN_PATHS = ["/sign-in", "/sign-up"];
 
 const ADMIN_ROLE_ID = 7;
 const ISSUER_ROLE_ID = 8;

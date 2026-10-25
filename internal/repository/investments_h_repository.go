@@ -15,6 +15,7 @@ type InvestmentsHRepository interface {
 	FindByUserID(ctx context.Context, userID uint32, limit, offset int) ([]domain.InvestmentsH, error)
 	FindByCampaignID(ctx context.Context, campaignID uint32) ([]domain.InvestmentsH, error)
 	FindPaidByCampaignID(ctx context.Context, campaignID uint32) ([]domain.InvestmentsH, error)
+	// FindPaidOrWatchlistByCampaignID(ctx context.Context, campaignID uint32) ([]domain.InvestmentsH, error)
 	FindByTransactionNo(ctx context.Context, transactionNo string) (*domain.InvestmentsH, error)
 	Update(ctx context.Context, investment *domain.InvestmentsH) error
 	Delete(ctx context.Context, id uint32) error
@@ -62,9 +63,21 @@ func (r *investmentsHRepository) FindByCampaignID(ctx context.Context, campaignI
 
 func (r *investmentsHRepository) FindPaidByCampaignID(ctx context.Context, campaignID uint32) ([]domain.InvestmentsH, error) {
 	var investments []domain.InvestmentsH
-	err := r.DB.WithContext(ctx).Where("campaignid = ? AND status = ?", campaignID, domain.InvestmentStatusPaid).Find(&investments).Error
+	err := r.DB.WithContext(ctx).Where("campaignid = ? AND status = ?", campaignID, domain.InvestmentStatusPaid).Find(&investments).Error	
 	return investments, err
 }
+
+// func (r *investmentsHRepository) FindPaidOrWatchlistByCampaignID(ctx context.Context, campaignID uint32) ([]domain.Campaign, error) {
+// 	var campaigns []domain.Campaign
+// 	err := r.DB.WithContext(ctx).
+// 	Table("campaign a").
+// 	Joins("LEFT JOIN watchlist b on b.a = campaign.id").
+// 	Joins("JOIN watchlist_user c on c.watchlistid = b.id").
+// 	Joins("LEFT JOIN investment_h b on b.a = campaign.id").
+// 	Where("(a.id = ? AND a.status = ?)",
+// 	 campaignID, domain.InvestmentStatusPaid).Find(&campaigns).Error
+// 	return campaigns, err
+// }
 
 func (r *investmentsHRepository) FindByTransactionNo(ctx context.Context, transactionNo string) (*domain.InvestmentsH, error) {
 	var investment domain.InvestmentsH

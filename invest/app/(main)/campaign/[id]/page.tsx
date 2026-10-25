@@ -33,12 +33,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ReviewTab } from "@/components/ReviewTab";
 import { UpdatesTab } from "@/components/UpdatesTab";
 
-function galleryImages(media: CampaignMedia[] | null): string[] {
-  if (!media) return [];
-  return media
-    .map((m) => m.URL);
-}
-
 export default function CampaignDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -50,7 +44,6 @@ export default function CampaignDetailPage() {
   const [campaignMedia, setCampaignMedia] = useState<CampaignMedia[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState(0);
   const [shareCount, setShareCount] = useState(1);
   const [investing, setInvesting] = useState(false);
   const [investError, setInvestError] = useState<string | null>(null);
@@ -133,7 +126,7 @@ export default function CampaignDetailPage() {
   const images = campaignMedia.filter((m) => m.MediaCode === "COVER" || m.Category === "image");
   const videos = campaignMedia.filter((m) => m.MediaCode === "VIDEO" || m.Category === "video");
   const posterUrl = images[0]?.URL;
-  // const images = galleryImages(campaignMedia);
+
   const progress = fundingProgress(campaign.FundingGoal,campaign.FundingAmount);
   const daysLeft = daysRemaining(campaign.EndDate);
   const minShares = Math.max(

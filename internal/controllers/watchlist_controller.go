@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/SamuelLazuardy/investment/internal/delivery/http/dto"
 	"github.com/SamuelLazuardy/investment/internal/delivery/http/middleware"
 	domain "github.com/SamuelLazuardy/investment/internal/domain"
 	"github.com/SamuelLazuardy/investment/internal/usecase"
@@ -29,19 +30,34 @@ func (ctrl *WatchlistController) RegisterRoutes(rg *gin.RouterGroup) {
 }
 
 func (ctrl *WatchlistController) ListWatchlist(c *gin.Context) {
+
 	session, ok := middleware.GetUser(c)
 	if !ok {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	campaigns, err := ctrl.watchlistUsecase.List(c.Request.Context(), session.UserID)
+	var req dto.WatchlistFilterRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "invalid query parameters: " + err.Error()})
+        return
+	}
+
+	if req.Limit <= 0 {
+        req.Limit = 10
+    }
+
+	campaigns,total, err := ctrl.watchlistUsecase.List(c.Request.Context(),req, session.UserID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not retrieve watchlist"})
 		return
 	}
 
-	c.JSON(http.StatusOK, campaigns)
+    c.JSON(http.StatusOK, dto.WatchlistPaginatedResponse[dto.CampaignWatchlist]{
+        Data:   campaigns,
+        Total:  total,
+    })
+
 }
 
 func (ctrl *WatchlistController) AddToWatchlist(c *gin.Context) {

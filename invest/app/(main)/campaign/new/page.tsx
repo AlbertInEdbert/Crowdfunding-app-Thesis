@@ -497,7 +497,7 @@ export default function newCompanyPage() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Wallet className="h-4 w-4 text-muted-foreground" />
-              <CardTitle>Campgign Highlight</CardTitle>
+              <CardTitle>Campaign Highlight</CardTitle>
             </div>
             <CardDescription>What make your product standout</CardDescription>
           </CardHeader>

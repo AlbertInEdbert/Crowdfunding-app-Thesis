@@ -32,7 +32,7 @@ func (j *CampaignJob) RegisterJobs(ctx context.Context) {
 
 	go func() {
 		for {
-			next := nextRun(time.Now(), 14, 10)
+			next := nextRun(time.Now(), 18, 33)
 			timer := time.NewTimer(time.Until(next))
 
 			select {

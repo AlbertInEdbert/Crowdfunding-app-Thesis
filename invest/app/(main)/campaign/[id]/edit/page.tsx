@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { FileText, Wallet } from "lucide-react";
+import { FileText, Sparkles, Wallet } from "lucide-react";
 import { NumericFormat } from "react-number-format";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Campaign, getCampaign, updateCampaign } from "@/lib/campaign";
+import { Campaign, getCampaign, getCampaignHighlights, Highlight, updateCampaign } from "@/lib/campaign";
 import { getCompanyByUserId } from "@/lib/company";
 import { getCurrentSession } from "@/lib/user";
+import HighlightsInput, { createHighlight } from "@/components/HighlightInput";
 
 interface CampaignFormValues {
   title: string;
@@ -47,7 +48,7 @@ export default function EditCampaignPage() {
   const [forbidden, setForbidden] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-
+  const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [form, setForm] = useState<CampaignFormValues>({
     title: "",
     description: "",
@@ -81,9 +82,11 @@ export default function EditCampaignPage() {
         }
 
         const data = await getCampaign(campaignId);
+        const highlighData = await getCampaignHighlights(campaignId);
+        console.log(highlighData)
         if (cancelled) return;
         setCampaign(data);
-
+        setHighlights(highlighData);
 
         try {
           const company = await getCompanyByUserId(session.UserID);
@@ -357,7 +360,18 @@ export default function EditCampaignPage() {
             </div>
           </CardContent>
         </Card>
-
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              <CardTitle>Campaign Highlight</CardTitle>
+            </div>
+            <CardDescription>What make your product standout</CardDescription>
+          </CardHeader>
+          <CardContent className="w-full grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <HighlightsInput value={highlights} onChange={setHighlights} max={10} className="sm:col-span-2" />
+          </CardContent>
+        </Card>
         {submitError && (
           <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {submitError}

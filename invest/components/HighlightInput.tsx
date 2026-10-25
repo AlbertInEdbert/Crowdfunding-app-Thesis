@@ -145,6 +145,12 @@ export default function HighlightsInput({
   className,
 }: HighlightsInputProps) {
 
+
+  value.forEach((item) => {
+      if(item.Uid == null){
+        item.Uid = newUid()
+      }
+  });
   const dndId = useId();
 
   const sensors = useSensors(
@@ -169,9 +175,11 @@ export default function HighlightsInput({
   };
  
   const remove = (uid: string) => emit(value.filter((i) => i.Uid !== uid));
- 
+
+ const FIELD_KEY = { title: "Title", description: "Description" } as const;
+
   const update = (uid: string, field: Field, text: string) =>
-    emit(value.map((i) => (i.Uid === uid ? { ...i, [field]: text } : i)));
+    emit(value.map((i) => (i.Uid === uid ? { ...i, [FIELD_KEY[field]]: text } : i)));
 
   return (
     <div className={cn("flex flex-col gap-3", className)}>

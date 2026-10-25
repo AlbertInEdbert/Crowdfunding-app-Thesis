@@ -2,9 +2,6 @@ import { getRole, getSession, Role } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-// const ADMIN_ROLE_ID = 7;
-
 export default async function ApprovalLayout({ children }: { children: React.ReactNode }) {
 const cookieStore = await cookies();
 const cookieHeader = cookieStore.toString();

@@ -418,7 +418,11 @@ func (u *campaignUsecase) CloseEndedCampaigns(ctx context.Context) (closed int, 
 			continue
 		}
 		closed++
+
 	}
+
+
+
 	return closed, errs
 }
 
