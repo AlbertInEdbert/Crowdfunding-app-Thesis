@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/SamuelLazuardy/investment/bootstrap"
-	"github.com/SamuelLazuardy/investment/internal/delivery/http/route"
+	router "github.com/SamuelLazuardy/investment/internal/delivery/http/route"
 	"github.com/SamuelLazuardy/investment/internal/infra/config"
 	"github.com/SamuelLazuardy/investment/internal/infra/smtp"
 	"github.com/gin-gonic/gin"
@@ -54,7 +54,7 @@ func main() {
 	r2Client := config.NewR2Client(cfg)
 
 	smtpPort, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
-	
+
 	if os.Getenv("SMTP_HOST") == "" {
 		log.Println("SMTP_HOST is not set")
 	}
@@ -76,7 +76,7 @@ func main() {
 		j.RegisterJobs(ctx)
 	}
 
-	srv := &http.Server{Addr: ":8080", Handler: r}
+	srv := &http.Server{Addr: ":8081", Handler: r}
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
